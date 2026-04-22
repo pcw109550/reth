@@ -955,6 +955,13 @@ pub trait BestTransactions: Iterator + Send {
     /// If set to true, no blob transactions will be returned.
     fn set_skip_blobs(&mut self, skip_blobs: bool);
 
+    /// Rebuilds the iterator's internal priority ordering of the currently independent
+    /// transactions.
+    ///
+    /// Intended to be called mid-iteration when the underlying ordering may have become stale
+    /// (e.g. base fee changed). The default implementation is a no-op.
+    fn refresh(&mut self) {}
+
     /// Convenience function for [`Self::skip_blobs`] that returns the iterator again.
     fn without_blobs(mut self) -> Self
     where
@@ -996,6 +1003,10 @@ where
 
     fn set_skip_blobs(&mut self, skip_blobs: bool) {
         (**self).set_skip_blobs(skip_blobs);
+    }
+
+    fn refresh(&mut self) {
+        (**self).refresh();
     }
 }
 

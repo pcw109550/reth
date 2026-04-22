@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alloy_primitives::{map::HashSet, Address};
-use reth_transaction_pool::{PoolTransaction, ValidPoolTransaction};
+use reth_transaction_pool::{BestTransactions, PoolTransaction, ValidPoolTransaction};
 
 /// Iterator that returns transactions for the block building process in the order they should be
 /// included in the block.
@@ -22,6 +22,13 @@ pub trait PayloadTransactions {
     /// Exclude descendants of the transaction with given sender and nonce from the iterator,
     /// because this transaction won't be included in the block.
     fn mark_invalid(&mut self, sender: Address, nonce: u64);
+
+    /// Rebuilds the underlying iterator's priority ordering of the currently independent
+    /// transactions.
+    ///
+    /// Intended to be called mid-iteration when the underlying ordering may have become stale.
+    /// The default implementation is a no-op.
+    fn refresh(&mut self) {}
 }
 
 /// [`PayloadTransactions`] implementation that produces nothing.
@@ -70,7 +77,7 @@ where
 impl<T, I> PayloadTransactions for BestPayloadTransactions<T, I>
 where
     T: PoolTransaction,
-    I: Iterator<Item = Arc<ValidPoolTransaction<T>>>,
+    I: BestTransactions<Item = Arc<ValidPoolTransaction<T>>>,
 {
     type Transaction = T;
 
@@ -86,6 +93,10 @@ where
 
     fn mark_invalid(&mut self, sender: Address, _nonce: u64) {
         self.invalid.insert(sender);
+    }
+
+    fn refresh(&mut self) {
+        self.best.refresh();
     }
 }
 

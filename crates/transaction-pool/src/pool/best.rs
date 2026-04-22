@@ -47,6 +47,10 @@ impl<T: TransactionOrdering> crate::traits::BestTransactions for BestTransaction
     fn set_skip_blobs(&mut self, skip_blobs: bool) {
         self.best.set_skip_blobs(skip_blobs)
     }
+
+    fn refresh(&mut self) {
+        self.best.refresh()
+    }
 }
 
 impl<T: TransactionOrdering> Iterator for BestTransactionsWithFees<T> {
@@ -156,6 +160,18 @@ impl<T: TransactionOrdering> BestTransactions<T> {
         }
     }
 
+    /// Drains [`Self::independent`] and reinserts every element into a fresh [`BTreeSet`].
+    ///
+    /// With a static `Ord` this yields the same ordering; but when the effective ordering rule
+    /// changes dynamically (e.g. a future change that recomputes `PendingTransaction::priority`
+    /// against a new base fee mid-iteration), reinserting forces each element through the new
+    /// comparator, producing an updated sort.
+    ///
+    /// Runs in `O(N log N)` where `N = self.independent.len()`: each insert is `O(log N)`.
+    pub(crate) fn refresh_independent(&mut self) {
+        self.independent = core::mem::take(&mut self.independent).into_iter().collect();
+    }
+
     /// Removes the currently best independent transaction from the independent set and the total
     /// set.
     fn pop_best(&mut self) -> Option<PendingTransaction<T>> {
@@ -198,6 +214,10 @@ impl<T: TransactionOrdering> crate::traits::BestTransactions for BestTransaction
 
     fn set_skip_blobs(&mut self, skip_blobs: bool) {
         self.skip_blobs = skip_blobs;
+    }
+
+    fn refresh(&mut self) {
+        Self::refresh_independent(self);
     }
 }
 
@@ -303,6 +323,10 @@ where
     fn set_skip_blobs(&mut self, skip_blobs: bool) {
         self.best.set_skip_blobs(skip_blobs)
     }
+
+    fn refresh(&mut self) {
+        self.best.refresh()
+    }
 }
 
 impl<I: fmt::Debug, P> fmt::Debug for BestTransactionFilter<I, P> {
@@ -390,6 +414,10 @@ where
             self.buffer.retain(|tx| !tx.transaction.is_eip4844())
         }
         self.inner.set_skip_blobs(skip_blobs)
+    }
+
+    fn refresh(&mut self) {
+        self.inner.refresh()
     }
 }
 

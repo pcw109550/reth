@@ -961,10 +961,11 @@ where
                 "Default supervisor url is used, consider changing --rollup.supervisor-http."
             );
         }
-        let supervisor_client = SupervisorClient::builder(self.supervisor_http.clone())
-            .minimum_safety(self.supervisor_safety_level)
-            .build()
-            .await;
+        let supervisor_client =
+            SupervisorClient::builder(self.supervisor_http.clone(), ctx.chain_spec().chain_id())
+                .minimum_safety(self.supervisor_safety_level)
+                .build()
+                .await;
 
         let blob_store = reth_node_builder::components::create_blob_store(ctx)?;
         let validator = TransactionValidationTaskExecutor::eth_builder(ctx.provider().clone())

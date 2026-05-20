@@ -154,6 +154,32 @@ where
         )
     }
 
+    /// Build the transaction pool without spawning any maintenance tasks.
+    ///
+    /// Useful when the caller needs to wrap the pool before spawning maintenance,
+    /// so canonical-state callbacks flow through the wrapper. Pair this with
+    /// [`spawn_maintenance_tasks`] on the wrapped pool.
+    pub fn build<BS>(
+        self,
+        blob_store: BS,
+        pool_config: PoolConfig,
+    ) -> reth_transaction_pool::Pool<
+        TransactionValidationTaskExecutor<V>,
+        CoinbaseTipOrdering<V::Transaction>,
+        BS,
+    >
+    where
+        BS: BlobStore,
+    {
+        let TxPoolBuilder { validator, .. } = self;
+        reth_transaction_pool::Pool::new(
+            validator,
+            CoinbaseTipOrdering::default(),
+            blob_store,
+            pool_config,
+        )
+    }
+
     /// Build the transaction pool with a custom [`TransactionOrdering`] and spawn its maintenance
     /// tasks.
     pub fn build_with_ordering_and_spawn_maintenance_task<BS, O>(

@@ -1012,7 +1012,17 @@ where
 
         // The Op txpool maintenance task is only spawned when interop is scheduled/active
         if ctx.chain_spec().op_fork_activation(OpHardfork::Interop) != ForkCondition::Never {
-            // spawn the Op txpool maintenance task
+            // Spawn failsafe polling task (shares supervisor client via clone)
+            ctx.task_executor().spawn_critical(
+                "Op txpool failsafe polling task",
+                reth_optimism_txpool::maintain::poll_failsafe_future(
+                    supervisor_client.clone(),
+                    transaction_pool.clone(),
+                ),
+            );
+            debug!(target: "reth::cli", "Spawned failsafe polling task");
+
+            // Spawn the Op txpool maintenance task
             let chain_events = ctx.provider().canonical_state_stream();
             ctx.task_executor().spawn_critical(
                 "Op txpool interop maintenance task",
